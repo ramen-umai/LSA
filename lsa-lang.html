@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>LSA暗号化・復号（Bootstrap版）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://kit.fontawesome.com/8ca18021b2.js" crossorigin="anonymous"></script>
+<style>
+body {background:#f7f9fc; padding:30px;}
+textarea {resize:none;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card shadow-sm mx-auto" style="max-width:800px;">
+    <div class="card-body">
+      <h2 class="card-title"><i class="fa-solid fa-key"></i> LSA暗号化・復号</h2>
+      <p class="text-muted">小文字ひらがなを3桁IDに変換して暗号化します</p>
+
+      <!-- 入力欄 -->
+      <label class="form-label">文章を入力（暗号化用）：</label>
+      <textarea id="plainInput" class="form-control" rows="2" placeholder="例：ねこ"></textarea>
+
+      <label class="form-label mt-2">パスワード（整数）:</label>
+      <input id="password" type="number" class="form-control" value="23">
+
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-primary" onclick="encryptText()"><i class="fa-solid fa-lock"></i> 暗号化</button>
+        <button class="btn btn-secondary" onclick="clearAll()"><i class="fa-solid fa-delete-left"></i> クリア</button>
+      </div>
+
+      <hr>
+      <h5>暗号化の結果</h5>
+      <div class="mb-2">
+        <label class="form-label">数字列:</label>
+        <textarea id="numStr" class="form-control" rows="1" readonly></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">掛け算結果:</label>
+        <textarea id="multiplied" class="form-control" rows="1" readonly></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Base64:</label>
+        <textarea id="base64" class="form-control" rows="1" readonly></textarea>
+      </div>
+
+      <hr>
+      <!-- 復号 -->
+      <h5>復号</h5>
+      <label class="form-label">Base64を入力：</label>
+      <textarea id="base64Input" class="form-control" rows="2" placeholder="暗号文（Base64）を貼り付け"></textarea>
+
+      <label class="form-label mt-2">パスワード（整数）:</label>
+      <input id="password2" type="number" class="form-control" value="23">
+
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-success" onclick="decryptText()"><i class="fa-solid fa-unlock"></i> 復号</button>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">復号結果:</label>
+        <textarea id="decrypted" class="form-control" rows="2" readonly></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ひらがな→3桁数字マップ
+const charToNum = {
+  "あ":101,"い":102,"う":103,"え":104,"お":105,
+  "か":106,"き":107,"く":108,"け":109,"こ":110,
+  "さ":111,"し":112,"す":113,"せ":114,"そ":115,
+  "た":116,"ち":117,"つ":118,"て":119,"と":120,
+  "な":121,"に":122,"ぬ":123,"ね":124,"の":125,
+  "は":126,"ひ":127,"ふ":128,"へ":129,"ほ":130,
+  "ま":131,"み":132,"む":133,"め":134,"も":135,
+  "や":136,"ゆ":137,"よ":138,
+  "ら":139,"り":140,"る":141,"れ":142,"ろ":143,
+  "わ":144,"を":145,"ん":146
+};
+// 逆マップ
+const numToChar = {};
+for (const [k,v] of Object.entries(charToNum)){
+  numToChar[v] = k;
+}
+
+// 暗号化
+function encryptText(){
+  const text = document.getElementById("plainInput").value.trim();
+  const pass = parseInt(document.getElementById("password").value);
+  if(!text || !pass) return;
+
+  // 文字→数字
+  let numStr = "";
+  for(let c of text){
+    if(charToNum[c]!==undefined) numStr += charToNum[c];
+    else numStr += "000"; // 未対応文字
+  }
+  document.getElementById("numStr").value = numStr;
+
+  // 掛け算
+  const multiplied = BigInt(numStr) * BigInt(pass);
+  document.getElementById("multiplied").value = multiplied.toString();
+
+  // Base64に変換
+  const base64 = btoa(multiplied.toString());
+  document.getElementById("base64").value = base64;
+}
+
+// 復号
+function decryptText(){
+  const b64 = document.getElementById("base64Input").value.trim();
+  const pass = parseInt(document.getElementById("password2").value);
+  if(!b64 || !pass) return;
+
+  try{
+    // Base64→数値
+    const multiplied = BigInt(atob(b64));
+    // 割り算して元の数字列
+    const num = multiplied / BigInt(pass);
+    const numStr = num.toString();
+
+    // 3桁ごとに復元
+    let text = "";
+    for(let i=0;i<numStr.length;i+=3){
+      const chunk = parseInt(numStr.substring(i,i+3));
+      text += numToChar[chunk] || "?";
+    }
+
+    document.getElementById("decrypted").value =
+      `数字列: ${numStr}\n文章: ${text}`;
+  }catch(e){
+    document.getElementById("decrypted").value = "復号エラー: "+e.message;
+  }
+}
+
+// クリア
+function clearAll(){
+  document.getElementById("plainInput").value = "";
+  document.getElementById("numStr").value = "";
+  document.getElementById("multiplied").value = "";
+  document.getElementById("base64").value = "";
+  document.getElementById("base64Input").value = "";
+  document.getElementById("decrypted").value = "";
+}
+</script>
+
+</body>
+</html>

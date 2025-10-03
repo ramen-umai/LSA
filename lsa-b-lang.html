@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>LSA暗号（改良版）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style> body{background:#f7f9fc;padding:24px} textarea{resize:none} </style>
+</head>
+<body>
+<div class="container">
+  <div class="card mx-auto shadow-sm" style="max-width:900px">
+    <div class="card-body">
+      <h3>🔐 LSA暗号（改良版）</h3>
+      <p class="text-muted">① パスワード^2 を足すオプション と ② ソルト（ランダム値） を追加できます（遊び用の強化）。</p>
+
+      <label class="form-label">平文（ひらがな）：</label>
+      <textarea id="plain" class="form-control" rows="2" placeholder="例：ねこ"></textarea>
+
+      <label class="form-label mt-2">パスワード（整数）:</label>
+      <input id="password" class="form-control" type="number" value="23">
+
+      <div class="form-check mt-2">
+        <input id="usePassSquared" class="form-check-input" type="checkbox" checked>
+        <label class="form-check-label" for="usePassSquared">パスワード^2 を加算する（オプション1）</label>
+      </div>
+      <div class="form-check">
+        <input id="useSalt" class="form-check-input" type="checkbox" checked>
+        <label class="form-check-label" for="useSalt">ソルトを追加する（オプション2）</label>
+      </div>
+
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-primary" onclick="encryptLSA()">暗号化</button>
+        <button class="btn btn-secondary" onclick="clearAll()">クリア</button>
+      </div>
+
+      <hr>
+      <h5>暗号結果</h5>
+      <label class="form-label">数字列（3桁ID連結）:</label>
+      <textarea id="numStr" class="form-control" rows="1" readonly></textarea>
+
+      <label class="form-label mt-2">暗号用大きな数（BigInt）:</label>
+      <textarea id="cipherVal" class="form-control" rows="1" readonly></textarea>
+
+      <label class="form-label mt-2">Base64（出力）:</label>
+      <textarea id="cipherB64" class="form-control" rows="2" readonly></textarea>
+
+      <hr>
+      <h5>復号</h5>
+      <label class="form-label">Base64を入力：</label>
+      <textarea id="inputB64" class="form-control" rows="2" placeholder="ここに暗号文（Base64）を貼り付け"></textarea>
+
+      <label class="form-label mt-2">パスワード（復号用）:</label>
+      <input id="passwordDec" class="form-control" type="number" value="23">
+
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-success" onclick="decryptLSA()">復号</button>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">復号結果:</label>
+        <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
+      </div>
+
+      <div class="mt-3 text-muted small">
+        ※ 注：この方式は「遊び用に強化した」もので、専門的な安全性（銀行や重要通信のレベル）はありません。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const charToId = {};
+
+// --- ひらがな＋濁音・半濁音 101-176 ---
+const hiraBase = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんっゃゅょー！？「」";
+const hiraDaku = ["が","ぎ","ぐ","げ","ご","ざ","じ","ず","ぜ","ぞ",
+                  "だ","ぢ","づ","で","ど","ば","び","ぶ","べ","ぼ",
+                  "ぱ","ぴ","ぷ","ぺ","ぽ"];
+let idx = 101;
+for(let ch of hiraBase) charToId[ch] = idx++;
+for(let ch of hiraDaku) charToId[ch] = idx++;
+
+// --- カタカナ＋濁音・半濁音 201-276 ---
+const kataBase = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンッャュョ";
+const kataDaku = ["ガ","ギ","グ","ゲ","ゴ","ザ","ジ","ズ","ゼ","ゾ",
+                  "ダ","ヂ","ヅ","デ","ド","バ","ビ","ブ","ベ","ボ",
+                  "パ","ピ","プ","ペ","ポ"];
+idx = 201;
+for(let ch of kataBase) charToId[ch] = idx++;
+for(let ch of kataDaku) charToId[ch] = idx++;
+
+// --- 英大文字 301-326 ---
+const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+for(let i=0;i<upper.length;i++) charToId[upper[i]] = 301 + i;
+
+// --- 英小文字 327-352 ---
+const lower = "abcdefghijklmnopqrstuvwxyz";
+for(let i=0;i<lower.length;i++) charToId[lower[i]] = 327 + i;
+
+// --- 数字 401-410 ---
+const digits = "0123456789!#$%&()=~|\@[];:+*<>?_/{}";
+for(let i=0;i<digits.length;i++) charToId[digits[i]] = 401 + i;
+
+// --- 漢字 500〜 ---
+idx = 500;
+const kanjiList = [
+  "月","火","水","木","金","土","日","曜","山","川","田",
+  "人","畑","子","供","女","男","文","明","開","化","信",
+  "号","機","星","見","下","蝦","夷","江","戸","京","都",
+  "上","海","佐","渡","新","潟","飯","橋"
+];
+for(const ch of kanjiList){
+  charToId[ch] = idx++;
+}
+
+// --- 逆マップ生成 ---
+const idToChar = {};
+for(const k in charToId) idToChar[String(charToId[k])] = k;
+
+console.log(charToId);
+console.log(idToChar);
+
+
+// ヘルパー：ランダムソルト（1〜9999）
+function randomSalt(){
+  return Math.floor(Math.random()*9999)+1;
+}
+
+// 暗号化
+function encryptLSA(){
+  const plain = document.getElementById("plain").value.trim();
+  const pass = Number(document.getElementById("password").value);
+  const usePSq = document.getElementById("usePassSquared").checked;
+  const useS = document.getElementById("useSalt").checked;
+  if(!plain || !pass) { alert("平文と整数パスワードを入力してね"); return; }
+
+  // 文字→3桁ID（未対応文字は000）
+  let numStr = "";
+  for(const ch of plain){
+    if(charToId[ch] !== undefined) numStr += String(charToId[ch]);
+    else numStr += "000";
+  }
+  document.getElementById("numStr").value = numStr;
+
+  // BigIntで計算： val = numStr * pass + (pass^2 if) + salt
+  const numBig = BigInt(numStr);
+  const passBig = BigInt(pass);
+  const psq = usePSq ? passBig * passBig : 0n;
+  const salt = useS ? BigInt(randomSalt()) : 0n;
+
+  const cipherBig = (numBig * passBig) + psq + salt;
+
+  // 出力用JSONにオプション・salt・値を入れてBase64化（復号時に必要）
+  const outObj = {
+    v: cipherBig.toString(),      // 暗号化した大きな数（文字列で保存）
+    salt: salt.toString(),        // salt（0なら無効）
+    passSquared: usePSq,          // フラグ（true/false）
+    scheme: "LSA_v2"              // 形式名（将来互換のため）
+  };
+  const b64 = btoa(JSON.stringify(outObj));
+
+  document.getElementById("cipherVal").value = cipherBig.toString();
+  document.getElementById("cipherB64").value = b64;
+}
+
+// 復号
+function decryptLSA(){
+  const b64 = document.getElementById("inputB64").value.trim();
+  const pass = Number(document.getElementById("passwordDec").value);
+  if(!b64 || !pass) { alert("Base64とパスワードを入れてね"); return; }
+
+  try{
+    const json = JSON.parse(atob(b64));
+    if(!json.v){ throw new Error("形式が不正です"); }
+
+    // 値取り出し
+    const cipherBig = BigInt(json.v);
+    const saltBig = BigInt(json.salt || "0");
+    const passSqFlag = Boolean(json.passSquared);
+
+    const passBig = BigInt(pass);
+    const psq = passSqFlag ? passBig * passBig : 0n;
+
+    // 元の数列を復元： numBig = (cipherBig - psq - salt) / pass
+    const numerator = cipherBig - psq - saltBig;
+    if(numerator < 0n){ throw new Error("復号に失敗（負の数）"); }
+
+    // 割り切れるかチェック
+    if(numerator % passBig !== 0n){
+      throw new Error("割り切れません（パスワードが間違っているか、オプション不一致）");
+    }
+    const numBig = numerator / passBig;
+    const numStr = numBig.toString();
+
+    // 3桁ごとに復元
+    let text = "";
+    // 左端から3桁ずつ。もし桁数が3の倍数でない場合は左にゼロパディング
+    const padLen = (3 - (numStr.length % 3)) % 3;
+    const padded = "0".repeat(padLen) + numStr;
+    for(let i=0;i<padded.length;i+=3){
+      const chunk = padded.substring(i,i+3);
+      text += idToChar[chunk] || "?";
+    }
+
+    document.getElementById("decrypted").value =
+      `数字列: ${numStr}\n文章: ${text}\n(ソルト: ${saltBig.toString()}, pass^2使用: ${passSqFlag})`;
+  }catch(e){
+    document.getElementById("decrypted").value = "復号エラー: " + e.message;
+  }
+}
+
+// クリア
+function clearAll(){
+  document.getElementById("plain").value = "";
+  document.getElementById("numStr").value = "";
+  document.getElementById("cipherVal").value = "";
+  document.getElementById("cipherB64").value = "";
+  document.getElementById("inputB64").value = "";
+  document.getElementById("decrypted").value = "";
+}
+</script>
+</body>
+</html>
