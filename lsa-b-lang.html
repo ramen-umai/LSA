@@ -16,8 +16,9 @@
 
       <label class="form-label">平文（ひらがな）：</label>
       <textarea id="plain" class="form-control" rows="2" placeholder="例：ねこ"></textarea>
+      <br>
       <h5>暗号化設定</h5>
-      <label class="form-label mt-2">パスワード（整数）:</label>
+      <label class="form-label mt-2">パスワード:</label>
       <input id="password" class="form-control" type="number" value="1">
       <div class="form-check mt-2">
         <input id="usePassSquared" class="form-check-input" type="checkbox" checked>
@@ -35,13 +36,13 @@
 
       <hr>
       <h5>暗号結果</h5>
-      <label class="form-label">数字列（3桁ID連結）:</label>
+      <label class="form-label">数列:</label>
       <textarea id="numStr" class="form-control" rows="1" readonly></textarea>
 
-      <label class="form-label mt-2">暗号用大きな数（BigInt）:</label>
+      <label class="form-label mt-2">BigInt:</label>
       <textarea id="cipherVal" class="form-control" rows="1" readonly></textarea>
 
-      <label class="form-label mt-2">Base64（出力）:</label>
+      <label class="form-label mt-2">暗号文:</label>
       <textarea id="cipherB64" class="form-control" rows="2" readonly></textarea>
 
       <hr>
@@ -221,4 +222,5 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
