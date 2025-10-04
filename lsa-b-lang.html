@@ -89,7 +89,7 @@ for(let ch of hiraBase) charToId[ch] = idx++;
 for(let ch of hiraDaku) charToId[ch] = idx++;
 
 // --- カタカナ＋濁音・半濁音 201-276 ---
-const kataBase = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンッャュョ";
+const kataBase = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンッャュョ　";
 const kataDaku = ["ガ","ギ","グ","ゲ","ゴ","ザ","ジ","ズ","ゼ","ゾ",
                   "ダ","ヂ","ヅ","デ","ド","バ","ビ","ブ","ベ","ボ",
                   "パ","ピ","プ","ペ","ポ"];
@@ -106,7 +106,7 @@ const lower = "abcdefghijklmnopqrstuvwxyz";
 for(let i=0;i<lower.length;i++) charToId[lower[i]] = 327 + i;
 
 // --- 数字 401-425 ---
-const digits = "0123456789!#$%&()=~|\@[];:+*<>?_/{}";
+const digits = "0123456789!#$%&()=~|\@[];:+*<>?_/{} ";
 for(let i=0;i<digits.length;i++) charToId[digits[i]] = 401 + i;
   
 // --- 漢字 500〜 ---
@@ -117,7 +117,7 @@ const kanjiList = [
   "号","機","星","見","下","蝦","夷","江","戸","京","都",
   "上","海","佐","渡","新","潟","飯","橋","危","字","岸",
   "森","山","里","岡","村","名","前","後","左","右","醤",
-  "油","豚","牛","羊","骨","自","時","間","々","学","楽",
+  "油","豚","牛","羊","骨","自","時","間","々","学","翔",
 ];
 for(const ch of kanjiList){
   charToId[ch] = idx++;
@@ -165,7 +165,7 @@ function encryptLSA(){
     v: cipherBig.toString(),      // 暗号化した大きな数（文字列で保存）
     salt: salt.toString(),        // salt（0なら無効）
     passSquared: usePSq,          // フラグ（true/false）
-    scheme: "LSA_v2"              // 形式名（将来互換のため）
+    scheme: "LSA_v2.5"              // 形式名（将来互換のため）
   };
   const b64 = btoa(JSON.stringify(outObj));
 
@@ -215,7 +215,6 @@ function decryptLSA(){
     document.getElementById("decrypted").value =
       `
       復号結果
-      
       復号された文章
       ${text}
       その他の情報
@@ -238,6 +237,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
