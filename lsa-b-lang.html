@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<title>LSA暗号　B型</title>
+<title>LSA暗号</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style> body{background:#f7f9fc;padding:24px} textarea{resize:none} </style>
@@ -11,7 +11,8 @@
 <div class="container">
   <div class="card mx-auto shadow-sm" style="max-width:900px">
     <div class="card-body">
-      <h3>LSA暗号　B型</h3>
+      <h3>LSA暗号</h3>
+      <p class="text-muted">Version2.0</p>
       <p class="text-muted">パスワード^2 を足すオプションとランダム値を追加できます。</p>
 
       <label class="form-label">平文（ひらがな）：</label>
@@ -55,7 +56,7 @@
       <textarea id="inputB64" class="form-control" rows="2" placeholder="ここに暗号文を貼り付け"></textarea>
 
       <label class="form-label mt-2">パスワード:</label>
-      <input id="passwordDec" class="form-control" type="number" value="1">
+      <input id="passwordDec" class="form-control" type="number" value="1000">
 
       <div class="mt-2 d-flex gap-2">
         <button class="btn btn-success" onclick="decryptLSA()">復号</button>
@@ -65,7 +66,7 @@
         <label class="form-label">復号結果:</label>
         <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
       </div>
-      
+      <br>
       <div class="alert alert-danger d-flex align-items-center" role="alert">
         <div>
           ※ 注：専門的な安全性（銀行や重要通信のレベル）はありません。
@@ -228,6 +229,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
