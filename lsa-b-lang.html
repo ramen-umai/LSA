@@ -75,13 +75,13 @@ body {
       <textarea id="cipherVal" class="form-control" rows="1" readonly></textarea>
 
       <label class="form-label mt-2">暗号文:</label>
-      <textarea id="cipherB64" class="form-control" rows="2" readonly></textarea>
+      <textarea id="cipherB64" class="form-control" rows="3" readonly></textarea>
       <br>
       <button class="btn btn-outline-secondary" onclick="copyText('cipherB64')">コピー</button>
       <hr>
       <h5>復号</h5>
       <label class="form-label">暗号文を入力：</label>
-      <textarea id="inputB64" class="form-control" rows="2" placeholder="ここに暗号文を貼り付け"></textarea>
+      <textarea id="inputB64" class="form-control" rows="3" placeholder="ここに暗号文を貼り付け"></textarea>
 
       <label class="form-label mt-2">パスワード:</label>
       <input id="passwordDec" class="form-control" type="number" value="1000">
@@ -97,7 +97,7 @@ body {
         <button class="btn btn-outline-secondary" onclick="copyText('decrypted')">コピー</button>
         <hr>
         <label class="form-label">その他の情報:</label>
-        <textarea id="other" class="form-control" rows="3" readonly></textarea>
+        <textarea id="other" class="form-control" rows="4" readonly></textarea>
         <br>
         <button class="btn btn-outline-secondary" onclick="copyText('other')">コピー</button>
       </div>
@@ -276,6 +276,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
