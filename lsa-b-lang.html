@@ -277,9 +277,7 @@ function decryptLSA(){
     document.getElementById("decrypted").value =
       `${text}`;
     document.getElementById("other").value =
-      `
-      数列: ${numStr}\nランダム値: ${saltBig.toString()}, pass^2: ${passSqFlag}, scheme: ${json.scheme}
-      `;
+      `数列: ${numStr}\nランダム値: ${saltBig.toString()},\npass^2: ${passSqFlag}, scheme: ${json.scheme}`;
   }catch(e){
     document.getElementById("decrypted").value = "エラー: " + e.message;
   }
@@ -297,3 +295,4 @@ function clearAll(){
 </script>
 </body>
 </html>
+
