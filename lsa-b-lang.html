@@ -78,7 +78,7 @@ body {
       <label class="form-label mt-2">暗号文:</label>
       <textarea id="cipherB64" class="form-control" rows="3" readonly></textarea>
       <br>
-      <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('cipherB64')">コピー</button>
+      <button class="btn btn-outline-secondary" onclick="copyText('cipherB64')">コピー</button>
       <hr>
       <h5>復号</h5>
       <label class="form-label">暗号文を入力：</label>
@@ -95,12 +95,12 @@ body {
         <label class="form-label">復号結果:</label>
         <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
         <br>
-        <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('decrypted')">コピー</button>
+        <button class="btn btn-outline-secondary" onclick="copyText('decrypted')">コピー</button>
         <hr>
         <label class="form-label">その他の情報:</label>
         <textarea id="other" class="form-control" rows="4" readonly></textarea>
         <br>
-        <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('other')">コピー</button>
+        <button class="btn btn-outline-secondary" onclick="copyText('other')">コピー</button>
       </div>
       <br>
       <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -128,20 +128,15 @@ body {
 function copyText(id){
   const el = document.getElementById(id);
   if(!el) return;
+
   navigator.clipboard.writeText(el.value).then(()=>{
     // トーストを表示
-    const toastEl = document.getElementById('copyToast');
+    const toastEl = document.getElementById('liveToast');
     const toast = new bootstrap.Toast(toastEl);
     toast.show();
   }).catch(()=>{
-    alert('コピーに失敗しました');
+    alert("コピーに失敗しました");
   });
-}
-  
-function copyText(id){
-  const el = document.getElementById(id);
-  if(!el) return;
-  navigator.clipboard.writeText(el.value)
 }
  
 const charToId = {};
@@ -302,11 +297,3 @@ function clearAll(){
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
