@@ -12,14 +12,18 @@
   <div class="card mx-auto shadow-sm" style="max-width:900px">
     <div class="card-body">
       <h3>LSA暗号　B型</h3>
-      <p class="text-muted">① パスワード^2 を足すオプション と ② ランダム値を追加できます。</p>
+      <p class="text-muted">パスワード^2 を足すオプションとランダム値を追加できます。</p>
 
       <label class="form-label">平文（ひらがな）：</label>
       <textarea id="plain" class="form-control" rows="2" placeholder="例：ねこ"></textarea>
       <br>
       <h5>暗号化設定</h5>
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+         安全性のため、<strong>パスワードを3桁以下にしない、伝えないでください</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
       <label class="form-label mt-2">パスワード:</label>
-      <input id="password" class="form-control" type="number" value="1">
+      <input id="password" class="form-control" type="number" value="1000">
       <div class="form-check mt-2">
         <input id="usePassSquared" class="form-check-input" type="checkbox" checked>
         <label class="form-check-label" for="usePassSquared">パスワード^2 を加算する</label>
@@ -61,9 +65,11 @@
         <label class="form-label">復号結果:</label>
         <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
       </div>
-
-      <div class="mt-3 text-muted small">
-        ※ 注：専門的な安全性（銀行や重要通信のレベル）はありません。
+      
+      <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <div>
+          ※ 注：専門的な安全性（銀行や重要通信のレベル）はありません。
+        </div>
       </div>
     </div>
   </div>
@@ -222,5 +228,6 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
