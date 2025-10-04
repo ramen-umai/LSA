@@ -115,7 +115,9 @@ const kanjiList = [
   "月","火","水","木","金","土","日","曜","山","川","田",
   "人","畑","子","供","女","男","文","明","開","化","信",
   "号","機","星","見","下","蝦","夷","江","戸","京","都",
-  "上","海","佐","渡","新","潟","飯","橋","危","字"
+  "上","海","佐","渡","新","潟","飯","橋","危","字","岸",
+  "森","山","里","岡","村","名","前","後","左","右","醤",
+  "油","豚","牛","羊","骨","自","時","間","々","学","楽",
 ];
 for(const ch of kanjiList){
   charToId[ch] = idx++;
@@ -211,9 +213,16 @@ function decryptLSA(){
     }
 
     document.getElementById("decrypted").value =
-      `数字列: ${numStr}\n文章: ${text}\n(ソルト: ${saltBig.toString()}, pass^2使用: ${passSqFlag})`;
+      `
+      復号結果
+      
+      復号された文章
+      ${text}
+      その他の情報
+      数列: ${numStr}\nランダム値: ${saltBig.toString()}, pass^2: ${passSqFlag}
+      `;
   }catch(e){
-    document.getElementById("decrypted").value = "復号エラー: " + e.message;
+    document.getElementById("decrypted").value = "エラー: " + e.message;
   }
 }
 
@@ -229,6 +238,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
