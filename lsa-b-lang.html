@@ -110,8 +110,32 @@ body {
     </div>
   </div>
 </div>
-  
+  <!-- トースト通知（右上固定） -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
+  <div id="copyToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        コピーしました！
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 <script>
+function copyText(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>{
+    // トーストを表示
+    const toastEl = document.getElementById('copyToast');
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+  }).catch(()=>{
+    alert('コピーに失敗しました');
+  });
+}
+  
 function copyText(id){
   const el = document.getElementById(id);
   if(!el) return;
@@ -276,6 +300,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
