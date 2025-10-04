@@ -81,6 +81,7 @@ textarea, input, label {
 
       <label class="form-label mt-2">暗号文:</label>
       <textarea id="cipherB64" class="form-control" rows="2" readonly></textarea>
+      <br>
       <button class="btn btn-outline-secondary" onclick="copyText('cipherB64')">コピー</button>
       <hr>
       <h5>復号</h5>
@@ -97,10 +98,12 @@ textarea, input, label {
       <div class="mt-3">
         <label class="form-label">復号結果:</label>
         <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
+        <br>
         <button class="btn btn-outline-secondary" onclick="copyText('decrypted')">コピー</button>
         <hr>
         <label class="form-label">その他の情報:</label>
         <textarea id="other" class="form-control" rows="3" readonly></textarea>
+        <br>
         <button class="btn btn-outline-secondary" onclick="copyText('other')">コピー</button>
       </div>
       <br>
@@ -118,12 +121,8 @@ function copyText(id){
   const el = document.getElementById(id);
   if(!el) return;
   navigator.clipboard.writeText(el.value)
-    .then(()=> alert('コピーしました！'))
-    .catch(()=> alert('コピーに失敗しました'));
 }
-</script>
-  
-<script>
+ 
 const charToId = {};
 
 // --- ひらがな＋濁音・半濁音 101-176 ---
@@ -282,5 +281,6 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
