@@ -192,6 +192,9 @@ for(const k in charToId) idToChar[String(charToId[k])] = k;
 console.log(charToId);
 console.log(idToChar);
 
+// --- 改行コードを予約（900） ---
+charToId['\n'] = 900;            // 暗号化時に改行をこのIDで表す
+idToChar['900'] = '\n';          // 復号時に 900 → 改行に戻す
 
 // ヘルパー：ランダムソルト（1〜9999）
 function randomSalt(){
@@ -295,4 +298,5 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
