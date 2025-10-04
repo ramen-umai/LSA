@@ -78,7 +78,7 @@ body {
       <label class="form-label mt-2">暗号文:</label>
       <textarea id="cipherB64" class="form-control" rows="3" readonly></textarea>
       <br>
-      <button class="btn btn-outline-secondary" onclick="copyText('cipherB64')">コピー</button>
+      <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('cipherB64')">コピー</button>
       <hr>
       <h5>復号</h5>
       <label class="form-label">暗号文を入力：</label>
@@ -95,12 +95,12 @@ body {
         <label class="form-label">復号結果:</label>
         <textarea id="decrypted" class="form-control" rows="3" readonly></textarea>
         <br>
-        <button class="btn btn-outline-secondary" onclick="copyText('decrypted')">コピー</button>
+        <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('decrypted')">コピー</button>
         <hr>
         <label class="form-label">その他の情報:</label>
         <textarea id="other" class="form-control" rows="4" readonly></textarea>
         <br>
-        <button class="btn btn-outline-secondary" onclick="copyText('other')">コピー</button>
+        <button class="btn btn-outline-secondary" id="liveToastBtn" onclick="copyText('other')">コピー</button>
       </div>
       <br>
       <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -112,13 +112,14 @@ body {
   </div>
 </div>
   <!-- トースト通知（右上固定） -->
-<div class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
-  <div id="copyToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="d-flex">
-      <div class="toast-body">
-        コピーしました！
-      </div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">ESECP</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+      コピーしました
     </div>
   </div>
 </div>
@@ -301,6 +302,7 @@ function clearAll(){
 </script>
 </body>
 </html>
+
 
 
 
