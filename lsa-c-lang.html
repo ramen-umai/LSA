@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LSA-C型</title>
+<style>
+  body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7fafc; color:#0f172a; padding:20px;}
+  .card{max-width:960px;margin:0 auto;background:#fff;border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(15,23,42,0.08);}
+  h1{margin:0 0 8px;font-size:20px;}
+  label{display:block;margin-top:12px;font-size:13px;color:#334155;}
+  textarea, input[type="text"], input[type="password"], select {width:100%;box-sizing:border-box;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-top:6px;font-size:15px}
+  .row{display:flex;gap:8px;margin-top:12px}
+  button{padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#0ea5e9;color:#fff;cursor:pointer}
+  button.alt{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1}
+  .small{font-size:13px;color:#475569;margin-top:8px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .checkbox{display:inline-flex;align-items:center;gap:6px;margin-top:6px}
+  footer{margin-top:14px;font-size:12px;color:#64748b}
+  .status{margin-top:8px;font-size:13px;color:#0f172a}
+</style>
+</head>
+<body>
+  <div class="card" id="app">
+    <h1>LSA-C型 暗号化 / 復号</h1>
+    <div class="small">説明：任意の文字をコードポイント単位で処理します。出力は Base64 化されたバイナリ（LSAC ヘッダ）です。。</div>
+
+    <label>動作モード
+      <select id="mode">
+        <option value="encrypt">Encrypt　暗号化</option>
+        <option value="decrypt">Decrypt　復号化</option>
+      </select>
+    </label>
+    <label class="checkbox"><input id="useSalt" type="checkbox" checked/> <span>ランダムソルトを使用する（推奨）</span></label>
+
+    <label>パスワード
+      <input id="password" placeholder="平文"type="text" value="mypassword" />
+    </label>
+
+    <label>平文
+      <textarea id="plaintext" rows="6" placeholder="平文">こんにちは、World</textarea>
+    </label>
+
+    <div class="row">
+      <button id="runBtn">暗号化</button>
+      <button class="alt" id="clearBtn">クリア</button>
+      <button class="alt" id="downloadBtn">ダウンロード</button>
+    </div>
+
+    <label>暗号文
+      <textarea id="output" rows="6" placeholder="Base64"></textarea>
+    </label>
+
+    <div class="row">
+      <button class="alt" id="copyBtn">コピー</button>
+      <button class="alt" id="clearOutBtn">クリア</button>
+    </div>
+    <p>status</p>
+    <div class="status" id="status"></div>
+
+    <footer>注意：LSA-C型はあくまで遊び用途までしか使わないでください。セキュリティー性は低いです</footer>
+  </div>
+
+<script>
+/* --- Helpers: BE read/write --- */
+function writeBE32(buf, offset, v) {
+  buf[offset]   = (v >>> 24) & 0xff;
+  buf[offset+1] = (v >>> 16) & 0xff;
+  buf[offset+2] = (v >>> 8) & 0xff;
+  buf[offset+3] = v & 0xff;
+}
+function readBE32(buf, offset) {
+  return ((buf[offset] << 24) >>> 0) + (buf[offset+1] << 16) + (buf[offset+2] << 8) + (buf[offset+3]);
+}
+
+/* --- String <-> codepoints --- */
+/* for...of iterates by Unicode codepoint (not code unit), so it's safe here */
+function stringToCodepoints(s) {
+  const arr = [];
+  for (const ch of s) arr.push(ch.codePointAt(0));
+  return arr;
+}
+function codepointsToString(arr) {
+  return arr.map(cp => String.fromCodePoint(cp)).join('');
+}
+
+/* --- base64 <-> Uint8Array --- */
+/* use chunking to avoid apply() limits */
+function uint8ToBase64(u8) {
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < u8.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+function base64ToUint8(b64) {
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+
+/* --- random u32 --- */
+function getRandomU32() {
+  const a = new Uint32Array(1);
+  window.crypto.getRandomValues(a);
+  return a[0] >>> 0;
+}
+
+/* --- core encrypt/decrypt --- */
+function encryptPlaintext(plaintext, password, useSalt) {
+  const plainCP = stringToCodepoints(plaintext);
+  let keyCP = stringToCodepoints(password);
+  if (keyCP.length === 0) keyCP = [0];
+  const salt = useSalt ? getRandomU32() : 0;
+  const n = plainCP.length;
+  const binLen = 4 + 4 + 4 + n * 4;
+  const buf = new Uint8Array(binLen);
+  buf[0]=0x4c; buf[1]=0x53; buf[2]=0x41; buf[3]=0x43; // 'LSAC'
+  writeBE32(buf, 4, salt);
+  writeBE32(buf, 8, n);
+  for (let i = 0; i < n; i++) {
+    const add = (keyCP[i % keyCP.length] + (salt & 0xFFFF)) % 0x110000;
+    const cipherCP = (plainCP[i] + add) % 0x110000;
+    writeBE32(buf, 12 + i*4, cipherCP);
+  }
+  return { b64: uint8ToBase64(buf), salt: salt, count: n };
+}
+
+function decryptBase64(b64text, password) {
+  let bin;
+  try { bin = base64ToUint8(b64text.trim()); } catch (e) { throw new Error('Base64 decode failed'); }
+  if (bin.length < 12) throw new Error('Binary too short');
+  if (!(bin[0] === 0x4c && bin[1] === 0x53 && bin[2] === 0x41 && bin[3] === 0x43)) throw new Error('Header mismatch');
+  const salt = readBE32(bin, 4) >>> 0;
+  const n = readBE32(bin, 8) >>> 0;
+  if (bin.length !== 12 + n*4) throw new Error('Length mismatch');
+  let keyCP = stringToCodepoints(password);
+  if (keyCP.length === 0) keyCP = [0];
+  const plainCP = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const cipherCP = readBE32(bin, 12 + i*4) >>> 0;
+    const sub = (keyCP[i % keyCP.length] + (salt & 0xFFFF)) % 0x110000;
+    const v = (cipherCP + 0x110000 - sub) % 0x110000;
+    plainCP[i] = v;
+  }
+  return { plaintext: codepointsToString(plainCP), salt: salt, count: n };
+}
+
+/* --- DOM wiring --- */
+const modeEl = document.getElementById('mode');
+const passEl = document.getElementById('password');
+const saltEl = document.getElementById('useSalt');
+const plainEl = document.getElementById('plaintext');
+const outputEl = document.getElementById('output');
+const runBtn = document.getElementById('runBtn');
+const clearBtn = document.getElementById('clearBtn');
+const copyBtn = document.getElementById('copyBtn');
+const clearOutBtn = document.getElementById('clearOutBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const statusEl = document.getElementById('status');
+
+function setStatus(s) { statusEl.textContent = s; }
+
+function runAction() {
+  const mode = modeEl.value;
+  const pwd = passEl.value || '';
+  try {
+    if (mode === 'encrypt') {
+      const { b64, salt, count } = encryptPlaintext(plainEl.value, pwd, saltEl.checked);
+      outputEl.value = b64;
+      setStatus(`Encrypted ${count} codepoints (salt=${salt})`);
+    } else {
+      if (!outputEl.value.trim()) { setStatus('Output area is empty — paste base64 to decrypt'); return; }
+      const { plaintext, salt, count } = decryptBase64(outputEl.value, pwd);
+      plainEl.value = plaintext;
+      setStatus(`Decrypted ${count} codepoints (salt=${salt})`);
+    }
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+  }
+}
+
+runBtn.addEventListener('click', runAction);
+modeEl.addEventListener('change', ()=> {
+  runBtn.textContent = modeEl.value === 'encrypt' ? '暗号化' : '復号化';
+});
+
+clearBtn.addEventListener('click', ()=> { plainEl.value=''; outputEl.value=''; setStatus('Cleared'); });
+clearOutBtn.addEventListener('click', ()=> { outputEl.value=''; setStatus('Output cleared'); });
+
+copyBtn.addEventListener('click', ()=> {
+  navigator.clipboard.writeText(outputEl.value).then(()=> setStatus('Copied to clipboard'), ()=> setStatus('Copy failed'));
+});
+
+downloadBtn.addEventListener('click', ()=> {
+  const mode = modeEl.value;
+  const blob = new Blob([outputEl.value], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = mode === 'encrypt' ? 'cipher.b64.txt' : 'output.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* initial status */
+setStatus('OK');
+</script>
+</body>
+</html>
