@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LSA-D型 暗号化 / 復号 (AES-GCM + PBKDF2)</title>
+<style>
+body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7fafc; color:#0f172a; padding:20px;}
+.card{max-width:960px;margin:0 auto;background:#fff;border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(15,23,42,0.08);}
+h1{margin:0 0 8px;font-size:20px;}
+label{display:block;margin-top:12px;font-size:13px;color:#334155;}
+textarea, input[type="text"], input[type="password"], input[type="number"], select {width:100%;box-sizing:border-box;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-top:6px;font-size:15px}
+.row{display:flex;gap:8px;margin-top:12px}
+button{padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#0ea5e9;color:#fff;cursor:pointer}
+button.alt{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1}
+.small{font-size:13px;color:#475569;margin-top:8px}
+.flex{display:flex;gap:8px;align-items:center}
+.checkbox{display:inline-flex;align-items:center;gap:6px;margin-top:6px}
+footer{margin-top:14px;font-size:12px;color:#64748b}
+.status{margin-top:8px;font-size:13px;color:#0f172a}
+</style>
+</head>
+<body>
+<div class="card" id="app">
+  <h1>LSA-D型 暗号化 / 復号 (AES-GCM + PBKDF2)</h1>
+  <div class="small">説明：PBKDF2 で鍵を作り、AES-GCM（認証タグ付き）で暗号化します。教育用ですが実用的に安全です。</div>
+
+  <label>動作モード
+    <select id="mode">
+      <option value="encrypt">Encrypt　暗号化</option>
+      <option value="decrypt">Decrypt　復号化</option>
+    </select>
+  </label>
+
+  <label class="checkbox"><input id="useSalt" type="checkbox" checked/> <span>ランダムソルトを使用（推奨）</span></label>
+
+  <label>パスワード
+    <input id="password" type="password" placeholder="パスワードを入力" value="mypassword" />
+  </label>
+
+  <label>PBKDF2 繰り返し回数（大きいほど安全だが遅くなる）
+    <input id="iterations" type="number" min="1000" step="1000" value="100000" />
+  </label>
+
+  <label>平文
+    <textarea id="plaintext" rows="6" placeholder="平文">こんにちは、World</textarea>
+  </label>
+
+  <div class="row">
+    <button id="runBtn">暗号化</button>
+    <button class="alt" id="clearBtn">クリア</button>
+    <button class="alt" id="downloadBtn">ダウンロード</button>
+  </div>
+
+  <label>暗号文（Base64）
+    <textarea id="output" rows="6" placeholder="Base64"></textarea>
+  </label>
+
+  <div class="row">
+    <button class="alt" id="copyBtn">コピー</button>
+    <button class="alt" id="clearOutBtn">クリア</button>
+  </div>
+  <p>status</p>
+  <div class="status" id="status">OK</div>
+
+  <footer>注意：強化しましたが、極めて重要なデータは専門のライブラリ/サービスを使ってください。</footer>
+</div>
+
+<script>
+/* --- Helpers --- */
+function setStatus(s){ document.getElementById('status').textContent = s; }
+function writeBE32(buf, offset, v) {
+buf[offset] = (v >>> 24) & 0xff;
+buf[offset+1] = (v >>> 16) & 0xff;
+buf[offset+2] = (v >>> 8) & 0xff;
+buf[offset+3] = v & 0xff;
+}
+function readBE32(buf, offset) {
+return ((buf[offset] << 24) >>> 0) + (buf[offset+1] << 16) + (buf[offset+2] << 8) + (buf[offset+3]);
+}
+function uint8ToBase64(u8) {
+let bin = '';
+const chunk = 0x8000;
+for (let i = 0; i < u8.length; i += chunk) {
+  bin += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+}
+return btoa(bin);
+}
+function base64ToUint8(b64) {
+const bin = atob(b64);
+const u8 = new Uint8Array(bin.length);
+for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+return u8;
+}
+function getRandomBytes(n){
+const a = new Uint8Array(n);
+crypto.getRandomValues(a);
+return a;
+}
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+/* --- Web Crypto helpers --- */
+async function deriveKeyFromPassword(password, salt, iterations) {
+// password: string, salt: Uint8Array
+const pwKey = await crypto.subtle.importKey(
+  'raw',
+  encoder.encode(password),
+  { name: 'PBKDF2' },
+  false,
+  ['deriveKey']
+);
+const key = await crypto.subtle.deriveKey(
+  {
+    name: 'PBKDF2',
+    salt: salt,
+    iterations: iterations,
+    hash: 'SHA-256'
+  },
+  pwKey,
+  { name: 'AES-GCM', length: 256 },
+  false,
+  ['encrypt','decrypt']
+);
+return key;
+}
+
+async function encryptAESGCM(plaintextStr, password, iterations, useSalt) {
+const salt = useSalt ? getRandomBytes(16) : new Uint8Array(16); // even if not using, put zeros
+const iv = getRandomBytes(12); // AES-GCM recommended 12 bytes
+const key = await deriveKeyFromPassword(password, salt, iterations);
+const plaintext = encoder.encode(plaintextStr);
+const cipherBuf = await crypto.subtle.encrypt(
+  { name: 'AES-GCM', iv: iv },
+  key,
+  plaintext
+);
+const cipherU8 = new Uint8Array(cipherBuf);
+
+// build payload: header 'LSAD' + iterations(4) + salt(16) + iv(12) + ciphertext
+const totalLen = 4 + 4 + 16 + 12 + cipherU8.length;
+const out = new Uint8Array(totalLen);
+out[0]=0x4c; out[1]=0x53; out[2]=0x41; out[3]=0x44; // 'LSAD'
+writeBE32(out, 4, iterations >>> 0);
+out.set(salt, 8);
+out.set(iv, 24);
+out.set(cipherU8, 36);
+return uint8ToBase64(out);
+}
+
+async function decryptAESGCM(base64Text, password) {
+const bin = base64ToUint8(base64Text.trim());
+if (bin.length < 36) throw new Error('Binary too short or corrupt');
+if (!(bin[0] === 0x4c && bin[1] === 0x53 && bin[2] === 0x41 && bin[3] === 0x44)) throw new Error('Header mismatch (not L S A D)');
+const iterations = readBE32(bin, 4) >>> 0;
+const salt = bin.slice(8, 24);
+const iv = bin.slice(24, 36);
+const cipher = bin.slice(36);
+const key = await deriveKeyFromPassword(password, salt, iterations);
+let plainBuf;
+try {
+  plainBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv },
+    key,
+    cipher
+  );
+} catch (e) {
+  throw new Error('Decryption failed (wrong password or tampered data)');
+}
+return { plaintext: decoder.decode(new Uint8Array(plainBuf)), iterations: iterations, salt: salt };
+}
+
+/* --- DOM wiring --- */
+const modeEl = document.getElementById('mode');
+const passEl = document.getElementById('password');
+const saltEl = document.getElementById('useSalt');
+const iterEl = document.getElementById('iterations');
+const plainEl = document.getElementById('plaintext');
+const outputEl = document.getElementById('output');
+const runBtn = document.getElementById('runBtn');
+const clearBtn = document.getElementById('clearBtn');
+const copyBtn = document.getElementById('copyBtn');
+const clearOutBtn = document.getElementById('clearOutBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
+modeEl.addEventListener('change', ()=> {
+runBtn.textContent = modeEl.value === 'encrypt' ? '暗号化' : '復号化';
+});
+
+async function runAction() {
+const mode = modeEl.value;
+const pwd = passEl.value || '';
+const iterations = Math.max(1000, parseInt(iterEl.value, 10) || 100000);
+try {
+  setStatus('処理中...');
+  if (mode === 'encrypt') {
+    const useSalt = !!saltEl.checked;
+    const b64 = await encryptAESGCM(plainEl.value, pwd, iterations, useSalt);
+    outputEl.value = b64;
+    outputEl.select();
+    setStatus(`Encrypted (${plainEl.value.length} chars), iterations=${iterations}`);
+  } else {
+    if (!outputEl.value.trim()) { setStatus('Output area is empty — paste base64 to decrypt'); return; }
+    const res = await decryptAESGCM(outputEl.value, pwd);
+    plainEl.value = res.plaintext;
+    setStatus(`Decrypted (${plainEl.value.length} chars), iterations=${res.iterations}`);
+  }
+} catch (e) {
+  setStatus('Error: ' + e.message);
+}
+}
+
+runBtn.addEventListener('click', runAction);
+clearBtn.addEventListener('click', ()=> { plainEl.value=''; outputEl.value=''; setStatus('Cleared'); });
+clearOutBtn.addEventListener('click', ()=> { outputEl.value=''; setStatus('Output cleared'); });
+
+copyBtn.addEventListener('click', ()=> {
+navigator.clipboard.writeText(outputEl.value).then(()=> setStatus('Copied to clipboard'), ()=> setStatus('Copy failed'));
+});
+
+downloadBtn.addEventListener('click', ()=> {
+const mode = modeEl.value;
+const blob = new Blob([outputEl.value], { type: 'text/plain;charset=utf-8' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = mode === 'encrypt' ? 'lsad_cipher.b64.txt' : 'output.txt';
+document.body.appendChild(a);
+a.click();
+a.remove();
+URL.revokeObjectURL(url);
+});
+
+/* initial status */
+setStatus('OK');
+</script>
+</body>
+</html>
